@@ -3,9 +3,13 @@ Request logging middleware.
 Assigns a unique request_id and trace_id to every request.
 Logs structured request/response details for DevInsight AI.
 """
+import asyncio
 import time
 import uuid
 import logging
+from datetime import datetime, timezone
+from starlette.background import BackgroundTask
+from app.monitoring.devinsight import forward_error_event
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -51,6 +55,19 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 endpoint=request.url.path,
                 status_code=500,
             ).inc()
+            asyncio.create_task(forward_error_event({
+                "service": "shopsphere",
+                "level": "ERROR",
+                "message": "Unhandled exception while processing request",
+                "endpoint": request.url.path,
+                "method": request.method,
+                "status_code": 500,
+                "request_id": request_id,
+                "trace_id": trace_id,
+                "exception_type": type(exc).__name__,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "duration_ms": round(duration * 1000, 2),
+            }))
             logger.error(
                 "Unhandled exception during request",
                 exc_info=True,
@@ -104,6 +121,31 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     "extra_client_ip": request.client.host if request.client else None,
                 },
             )
+
+        # Forward server errors after the response is sent; never delay the
+        # customer response while DevInsight receives the event.
+        if response.status_code >= 500:
+            event = {
+                "service": "shopsphere",
+                "level": "ERROR",
+                "message": f"HTTP {response.status_code} returned by ShopSphere",
+                "endpoint": request.url.path,
+                "method": request.method,
+                "status_code": response.status_code,
+                "request_id": request_id,
+                "trace_id": trace_id,
+                "exception_type": None,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "duration_ms": round(duration * 1000, 2),
+            }
+            previous_background = response.background
+
+            async def run_telemetry_tasks():
+                if previous_background is not None:
+                    await previous_background()
+                await forward_error_event(event)
+
+            response.background = BackgroundTask(run_telemetry_tasks)
 
         # Propagate correlation IDs in response headers
         response.headers["X-Request-ID"] = request_id
