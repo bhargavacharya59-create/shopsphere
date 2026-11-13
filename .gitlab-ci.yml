@@ -1,0 +1,58 @@
+stages:
+  - test
+  - build
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+
+# Backend tests use the isolated SQLite database configured by tests/conftest.py.
+backend_tests:
+  stage: test
+  image: python:3.12-slim
+  variables:
+    APP_ENV: "testing"
+    DEBUG: "false"
+    DATABASE_URL: "sqlite:///./test_ss.db"
+    SECRET_KEY: "ci-only-secret-key-do-not-use-outside-tests"
+    ENABLE_FAILURE_SIMULATION: "true"
+  cache:
+    key:
+      files:
+        - backend/requirements.txt
+    paths:
+      - .cache/pip/
+  before_script:
+    - cd backend
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements.txt
+  script:
+    - python -m pytest tests/ -v --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: backend/report.xml
+    paths:
+      - backend/report.xml
+    expire_in: 1 week
+
+# Vite 8 and the React Vite plugin in this repository require Node >=20.19 or >=22.12.
+frontend_build:
+  stage: build
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/.npm/
+  script:
+    - cd frontend
+    - npm ci --legacy-peer-deps --cache .npm --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 week
