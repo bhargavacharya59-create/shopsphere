@@ -163,30 +163,44 @@ Frontend will be available at: **http://localhost:5173**
 
 ---
 
-## Docker Setup
+## Docker Setup (with DevInsight AI)
+
+For live monitoring, start the DevInsight stack first. It creates the shared `observability-net` network and listens on its normal ports.
+
+In the DevInsight repository root, create the shared network once and start its Compose stack:
 
 ```bash
-# Start everything (PostgreSQL + Backend + Frontend)
-docker compose up --build
-
-# Access:
-#   Frontend  → http://localhost:3000
-#   Backend   → http://localhost:8000
-#   API Docs  → http://localhost:8000/docs
+docker network create observability-net
+docker compose up -d --build
 ```
 
-To enable failure simulation:
+Then in this ShopSphere repository root:
 
 ```bash
-ENABLE_FAILURE_SIMULATION=true docker compose up --build
+cp .env.example .env
+cp backend/.env.example backend/.env
+# Set INGEST_API_KEY in this root .env to the exact same value as DevInsight.
+docker compose up -d --build
 ```
 
-To stop:
+ShopSphere uses non-conflicting host ports:
+
+- Storefront: http://localhost:3002
+- Backend API: http://localhost:8001
+- API docs: http://localhost:8001/docs
+- PostgreSQL: localhost:5433
+
+DevInsight remains available at http://localhost:3000 and its API at http://localhost:8000.
+
+ShopSphere sends HTTP 5xx events to DevInsight after responding to the customer, Prometheus scrapes ShopSphere at `shopsphere-backend:8000/metrics`, and OpenTelemetry traces are exported to `http://devinsight-otel:4317`. The same random `INGEST_API_KEY` must be configured in both repository-root `.env` files. Never commit real `.env` files.
+
+To stop ShopSphere while keeping database data:
 
 ```bash
-docker compose down        # keep data
-docker compose down -v     # also delete database volume
+docker compose down
 ```
+
+Use `docker compose down -v` only when you intentionally want to delete the ShopSphere database volume.
 
 ---
 
