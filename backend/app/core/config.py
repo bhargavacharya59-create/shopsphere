@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     # Monitoring
     ENABLE_METRICS: bool = True
     OTLP_ENDPOINT: str = "http://localhost:4317"
+    DEVINSIGHT_INGEST_URL: str = ""
+    DEVINSIGHT_INGEST_API_KEY: str = ""
 
     # Failure Simulation — disabled by default, dev-only
     ENABLE_FAILURE_SIMULATION: bool = False
