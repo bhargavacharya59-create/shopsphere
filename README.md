@@ -1,93 +1,394 @@
 # ShopSphere
 
+A full-stack e-commerce application built as a **monitored target** for [DevInsight AI](https://gitlab.com/bhargavacharya59/shopsphere) — an AI-powered application failure detection and root cause analysis platform.
 
+ShopSphere is a realistic shopping website that generates structured logs, Prometheus metrics, and OpenTelemetry traces. DevInsight AI connects to these telemetry streams to detect anomalies and investigate failures.
 
-## Getting started
+---
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Architecture
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/bhargavacharya59/shopsphere.git
-git branch -M main
-git push -uf origin main
+┌─────────────────┐        ┌─────────────────┐        ┌──────────────┐
+│  React Frontend │──────▶│  FastAPI Backend │──────▶│  PostgreSQL  │
+│  (Vite + TS)    │  HTTP  │  (Python 3.12)  │  SQL   │  Database    │
+│  Port 5173      │        │  Port 8000       │        │  Port 5432   │
+└─────────────────┘        └────────┬────────┘        └──────────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+             Structured        Prometheus      OpenTelemetry
+             JSON Logs         /metrics         Traces
+                    │               │               │
+                    └───────────────┴───────────────┘
+                                    │
+                             DevInsight AI
+                         (monitors ShopSphere)
 ```
 
-## Integrate with your tools
+## Technology Stack
 
-* [Set up project integrations](https://gitlab.com/bhargavacharya59/shopsphere/-/settings/integrations)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
+| Routing | React Router v6 |
+| HTTP Client | Axios |
+| Backend | Python 3.12, FastAPI 0.115 |
+| ORM | SQLAlchemy 2.0 |
+| Migrations | Alembic |
+| Database | PostgreSQL 16 |
+| Auth | JWT (python-jose) + bcrypt |
+| Metrics | Prometheus (prometheus-client) |
+| Tracing | OpenTelemetry |
+| Testing | pytest, Vitest |
+| Containers | Docker, Docker Compose |
 
-## Collaborate with your team
+---
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+## Folder Structure
 
-## Test and Deploy
+```
+shopsphere/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI app entry point
+│   │   ├── core/
+│   │   │   ├── config.py        # Pydantic settings
+│   │   │   ├── security.py      # JWT + bcrypt
+│   │   │   └── logging_config.py # Structured JSON logging
+│   │   ├── api/routes/          # Route handlers
+│   │   ├── models/              # SQLAlchemy ORM models
+│   │   ├── schemas/             # Pydantic request/response schemas
+│   │   ├── services/            # Business logic
+│   │   ├── database/            # Engine, session, seeder
+│   │   ├── middleware/          # Request logging middleware
+│   │   └── monitoring/          # Prometheus metrics, OTel tracing
+│   ├── tests/                   # pytest test suite
+│   ├── alembic/                 # Database migrations
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx              # Router setup
+│   │   ├── pages/               # 11 page components
+│   │   ├── components/          # Reusable UI components
+│   │   ├── context/             # Auth & Cart React contexts
+│   │   ├── lib/api.ts           # Axios client
+│   │   └── types/               # TypeScript types
+│   ├── Dockerfile
+│   └── .env.example
+├── docker-compose.yml
+└── README.md
+```
 
-Use the built-in continuous integration in GitLab.
+---
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+## Prerequisites
 
-***
+- **Python** 3.12+
+- **Node.js** 18+
+- **PostgreSQL** 14+ (or Docker)
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Local Setup (Without Docker)
 
-## Suggestions for a good README
+### 1. Clone the repo
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```bash
+git clone https://gitlab.com/bhargavacharya59/shopsphere.git
+cd shopsphere
+```
 
-## Name
-Choose a self-explaining name for your project.
+### 2. Backend setup
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```bash
+cd backend
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+# Copy and configure environment
+cp .env.example .env
+# Edit .env — set your DATABASE_URL and SECRET_KEY
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# Install dependencies
+pip install -r requirements.txt
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# Start the server (tables and seed data created automatically on first run)
+uvicorn app.main:app --reload --port 8000
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+Backend will be available at: **http://localhost:8000**  
+Swagger docs: **http://localhost:8000/docs**
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### 3. Frontend setup
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+cd frontend
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+# Copy environment config
+cp .env.example .env
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+# Install dependencies
+npm install
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# Start dev server
+npm run dev
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Frontend will be available at: **http://localhost:5173**
 
-## License
-For open source projects, say how it is licensed.
+---
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` |
+| `SECRET_KEY` | JWT signing secret (min 32 chars) | **Must change** |
+| `APP_ENV` | `development` / `production` / `testing` | `development` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT expiry | `1440` (24h) |
+| `ALLOWED_ORIGINS` | CORS allowed origins | `http://localhost:5173` |
+| `ENABLE_METRICS` | Expose /metrics endpoint | `true` |
+| `OTLP_ENDPOINT` | OpenTelemetry collector URL | _(empty = disabled)_ |
+| `ENABLE_FAILURE_SIMULATION` | Enable dev failure endpoints | `false` |
+| `SERVICE_NAME` | Service identifier for telemetry | `shopsphere` |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API base URL | `http://localhost:8000` |
+
+---
+
+## Docker Setup
+
+```bash
+# Start everything (PostgreSQL + Backend + Frontend)
+docker compose up --build
+
+# Access:
+#   Frontend  → http://localhost:3000
+#   Backend   → http://localhost:8000
+#   API Docs  → http://localhost:8000/docs
+```
+
+To enable failure simulation:
+
+```bash
+ENABLE_FAILURE_SIMULATION=true docker compose up --build
+```
+
+To stop:
+
+```bash
+docker compose down        # keep data
+docker compose down -v     # also delete database volume
+```
+
+---
+
+## Database Setup
+
+Tables are created automatically on first startup.  
+Seed data (27 products, 6 categories, demo users) is inserted in `development` mode.
+
+**Demo accounts:**
+
+| Email | Password | Role |
+|-------|----------|------|
+| `demo@shopsphere.com` | `demo1234` | Customer |
+| `admin@shopsphere.com` | `admin1234` | Admin |
+
+### Alembic migrations (for production)
+
+```bash
+cd backend
+
+# Generate a new migration after model changes
+alembic revision --autogenerate -m "describe your change"
+
+# Apply migrations
+alembic upgrade head
+
+# Roll back one step
+alembic downgrade -1
+```
+
+---
+
+## API Documentation
+
+FastAPI auto-generates interactive docs:
+
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+
+### Key Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/register` | Register new user |
+| `POST` | `/api/auth/login` | Login, receive JWT |
+| `GET` | `/api/auth/me` | Current user profile |
+| `GET` | `/api/products` | List/search/filter products |
+| `GET` | `/api/products/{id}` | Product detail |
+| `GET` | `/api/products/categories` | All categories |
+| `GET` | `/api/cart` | Get cart |
+| `POST` | `/api/cart/items` | Add to cart |
+| `PATCH` | `/api/cart/items/{id}` | Update quantity |
+| `DELETE` | `/api/cart/items/{id}` | Remove from cart |
+| `POST` | `/api/orders` | Place order |
+| `GET` | `/api/orders` | Order history |
+| `GET` | `/api/orders/{id}` | Order detail |
+| `GET` | `/health` | Liveness probe |
+| `GET` | `/ready` | Readiness probe (checks DB) |
+| `GET` | `/metrics` | Prometheus metrics |
+
+---
+
+## Testing
+
+### Backend (pytest)
+
+```bash
+cd backend
+python -m pytest tests/ -v
+```
+
+38 tests covering:
+- Health endpoints
+- Auth (register, login, JWT, duplicate detection)
+- Products (list, filter, search, pagination, sort)
+- Cart (add, update, remove, total calculation)
+- Orders (create, list, access control)
+- Failure simulation scenarios
+
+Tests use SQLite in-memory — no PostgreSQL required.
+
+### Frontend (Vitest)
+
+```bash
+cd frontend
+npm test
+```
+
+---
+
+## Failure Simulation (DevInsight AI Demo)
+
+ShopSphere includes a **controlled failure simulator** so DevInsight AI can demonstrate real anomaly detection.
+
+**Enable it:**
+
+```bash
+# In backend/.env
+ENABLE_FAILURE_SIMULATION=true
+APP_ENV=development
+```
+
+### Available Scenarios
+
+| Endpoint | Scenario | What DevInsight AI detects |
+|----------|----------|---------------------------|
+| `POST /api/dev/simulate/db-latency` | Slow DB queries | High database query latency |
+| `POST /api/dev/simulate/payment-failure` | All checkouts fail | Payment API errors |
+| `POST /api/dev/simulate/order-service` | Orders return 503 | Service unavailable |
+| `POST /api/dev/simulate/error-spike` | Random 500 errors | Increased server error rate |
+| `POST /api/dev/simulate/cpu-spike` | CPU-intensive workload | Abnormally high CPU usage |
+| `POST /api/dev/simulate/memory-spike` | Memory allocation spike | Increasing memory usage |
+| `POST /api/dev/simulate/reset` | Clear all simulations | — |
+| `GET /api/dev/simulate/status` | Current simulation state | — |
+
+**Example — simulate Payment Service failure:**
+
+```bash
+# Activate
+curl -X POST http://localhost:8000/api/dev/simulate/payment-failure
+
+# Now try to checkout — it will fail with:
+# "Payment could not be processed. Please try again later."
+
+# Reset
+curl -X POST http://localhost:8000/api/dev/simulate/reset
+```
+
+**Safety guarantees:**
+- Blocked entirely in `APP_ENV=production`
+- Requires `ENABLE_FAILURE_SIMULATION=true`
+- All simulations are bounded (CPU spike has a duration limit, memory spike has a 200MB cap)
+- Every simulated failure is logged with `[SIMULATED FAILURE]` prefix
+- No database data is damaged
+
+---
+
+## Monitoring Integration (DevInsight AI)
+
+ShopSphere exposes three telemetry streams:
+
+### 1. Structured Logs (JSON)
+
+Every request emits a JSON log line:
+
+```json
+{
+  "timestamp": "2026-11-07T08:00:00Z",
+  "level": "INFO",
+  "service": "shopsphere",
+  "environment": "development",
+  "request_id": "abc-123",
+  "trace_id": "xyz-456",
+  "endpoint": "/api/products",
+  "status_code": 200,
+  "duration_ms": 45.3
+}
+```
+
+### 2. Prometheus Metrics
+
+```
+GET http://localhost:8000/metrics
+```
+
+Key metrics:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `shopsphere_http_requests_total` | Counter | Total requests by endpoint/status |
+| `shopsphere_http_request_duration_seconds` | Histogram | Request latency |
+| `shopsphere_http_errors_total` | Counter | HTTP 4xx/5xx errors |
+| `shopsphere_db_query_duration_seconds` | Histogram | DB operation latency |
+| `shopsphere_db_connection_failures_total` | Counter | DB connection errors |
+| `shopsphere_orders_total` | Counter | Orders by status |
+| `shopsphere_payments_total` | Counter | Payment attempts by status |
+| `shopsphere_simulated_failures_total` | Counter | Simulated failure events |
+
+### 3. OpenTelemetry Traces
+
+Configure the OTLP endpoint:
+
+```env
+OTLP_ENDPOINT=http://your-otel-collector:4317
+```
+
+Traces capture HTTP requests, backend processing, and database operations with correlation IDs.
+
+---
+
+## Pages
+
+| Route | Page |
+|-------|------|
+| `/` | Home — hero banner, featured & trending products |
+| `/products` | Product listing with filters, search, sort, pagination |
+| `/products/:id` | Product detail page |
+| `/cart` | Shopping cart |
+| `/checkout` | 3-step checkout (shipping → payment → review) |
+| `/orders/:id/confirmation` | Order confirmation |
+| `/orders` | Order history |
+| `/orders/:id` | Order detail |
+| `/login` | Sign in |
+| `/register` | Create account |
+| `/profile` | User profile |
